@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:whisper_flutter_plus/whisper_flutter_plus.dart';
 
 void main() {
   runApp(const MainApp());
@@ -45,8 +46,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late AudioRecorder audioRecord;
   late AudioPlayer audioPlayer;
+  late AudioRecorder audioRecord;
   bool isRecording = false;
   String audioPath = '';
 
@@ -55,6 +56,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
+    // Initialize recorder and player
     audioRecord = AudioRecorder();
     audioPlayer = AudioPlayer();
 
@@ -72,49 +74,63 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future _requestPerms() async {
-    // Map<Permission, PermissionStatus> statuses =
-    //     await [Permission.microphone, Permission.storage].request();
-    // print(statuses[Permission.microphone]);
-    // print(statuses[Permission.storage]);
+    // PermissionStatus recStatus = await Permission.microphone.request();
+    // print('Microphone Perms: $recStatus');
 
-    PermissionStatus recStatus = await Permission.microphone.request();
-    print('Microphone Perms: $recStatus');
-    if (recStatus.isGranted) {
+    // Asks for microphone and audio file access permissions
+    Map<Permission, PermissionStatus> statuses =
+        await [Permission.microphone, Permission.audio].request();
+
+    PermissionStatus? audioFileStatus = statuses[Permission.audio];
+    PermissionStatus? micStatus = statuses[Permission.microphone];
+
+    debugPrint('|- Microphone Perms: $micStatus');
+    debugPrint('|- Audio File Access Perms: $audioFileStatus');
+
+    if (micStatus == PermissionStatus.granted &&
+        audioFileStatus == PermissionStatus.granted) {
+      // Builds audio file path if perms are granted
       await _buildFilePath();
     }
   }
 
   Future _buildFilePath() async {
-    Directory tempDir = await getTemporaryDirectory();
+    // Gets cache directory as string for storing audio file on cache
+    Directory tempDir = await getApplicationDocumentsDirectory();
     String tempPath = tempDir.path;
 
+    // Create directory string and audio file string
     setState(() {
       dirPath = '$tempPath/audio';
       filePath = '$dirPath/test.wav';
     });
 
-    print('DIR PATH: $dirPath');
-    print('FILE PATH: $filePath');
+    debugPrint('|- Directory Path: $dirPath');
+    debugPrint('|- Audio File Path: $filePath');
 
+    // Create directory and audio file
     await _createDir();
     await _createFile();
   }
 
   Future _createDir() async {
+    // Check if the directory already exists
     bool isDirCreated = await Directory(dirPath).exists();
     if (!isDirCreated) {
+      // If it doesn't, create directory
       Directory(dirPath).create(recursive: true).then((Directory dir) {
-        print("DIR CREATED AT: ${dir.path}");
+        debugPrint("|- Directory Created At: ${dir.path}");
       });
     }
   }
 
   Future _createFile() async {
+    // Create file at directory path
     File(filePath).create(recursive: true).then((File file) async {
       Uint8List bytes = await file.readAsBytes();
-      file.writeAsBytes(bytes);
+      file.writeAsBytes(bytes, mode: FileMode.writeOnly);
 
-      print('FILE CREATED AT: ${file.path}');
+      debugPrint('|- Audio File Created At: ${file.path}');
     });
   }
 
@@ -123,16 +139,23 @@ class _HomePageState extends State<HomePage> {
       await _requestPerms();
 
       if (await Permission.microphone.status.isGranted) {
-        print('FILE PATH DOUBLE CHECK: $filePath');
+        debugPrint('|- FILE PATH DOUBLE CHECK: $filePath');
 
-        await audioRecord.start(const RecordConfig(), path: filePath);
+        const recConfig = RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+        );
+
+        debugPrint('|- Recording Config: $recConfig');
+
+        await audioRecord.start(RecordConfig(), path: filePath);
 
         setState(() {
           isRecording = true;
         });
       }
     } catch (e) {
-      print('Error Start Recording: $e');
+      debugPrint('[!!!]- Error: _startRecording() -> $e');
     }
   }
 
@@ -143,19 +166,47 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         isRecording = false;
         audioPath = path!;
-        print(audioPath);
+        debugPrint('|- Recording Saved To: $audioPath');
       });
     } catch (e) {
-      print('Error Stop Recording: $e');
+      debugPrint('[!!!]- Error: _stopRecording() -> $e');
     }
   }
 
   Future<void> _playRecording() async {
     try {
-      Source urlSource = UrlSource(audioPath);
+      Source urlSource = DeviceFileSource(audioPath);
       await audioPlayer.play(urlSource);
     } catch (e) {
-      print('Error Playing Recording: $e');
+      debugPrint('[!!!]- Error: _playRecording() -> $e');
+    }
+  }
+
+  Future _translate() async {
+    try {
+      WhisperModel model = WhisperModel.base;
+      final Whisper whisper = Whisper(model: WhisperModel.base);
+      debugPrint('|- Whisper Model Loaded: ${model.modelName}');
+
+      final String? whisperVersion = await whisper.getVersion();
+      debugPrint('|- Whisper Version: $whisperVersion');
+
+      debugPrint('|- Whisper Is Working...');
+      var whisperResponse = await whisper.transcribe(
+        transcribeRequest: TranscribeRequest(
+          audio: audioPath,
+          isTranslate: true,
+          isNoTimestamps: false,
+          splitOnWord: false,
+        ),
+      );
+
+      final String translatedText = whisperResponse.text;
+      print('|- Done! Whisper\'s Output: $translatedText');
+
+      return translatedText;
+    } catch (e) {
+      debugPrint('[!!!]- Error: _translate() -> $e');
     }
   }
 
@@ -166,9 +217,9 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Button Row
             if (isRecording) const Text('Recording in Progress'),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            Column(
               children: [
                 ElevatedButton(
                     onPressed: isRecording ? _stopRecording : _startRecording,
@@ -177,15 +228,21 @@ class _HomePageState extends State<HomePage> {
                         : const Text('Start Recording')),
                 if (!isRecording && audioPath != null && audioPath.isNotEmpty)
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(width: 20),
                       ElevatedButton(
                           onPressed: _playRecording,
                           child: const Text('Play Recording')),
+                      SizedBox(width: 20),
+                      ElevatedButton(
+                          onPressed: _translate,
+                          child: const Text('Translate')),
                     ],
                   ),
               ],
             ),
+
+            // Text Field: Text to Translate
             Text('Input Field'),
             Padding(
               padding: EdgeInsets.all(20.0),
@@ -198,6 +255,8 @@ class _HomePageState extends State<HomePage> {
                     filled: true,
                   )),
             ),
+
+            // Text Field: Whisper Output Text
             Text('Output Field'),
             Padding(
               padding: EdgeInsets.all(20.0),
