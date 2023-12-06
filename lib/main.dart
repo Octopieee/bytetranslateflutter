@@ -1,15 +1,25 @@
-// ignore_for_file: prefer_const_constructors
-
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+
+import 'package:curved_labeled_navigation_bar/curved_navigation_bar.dart';
+import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
+
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
+
 import 'package:whisper_flutter_plus/whisper_flutter_plus.dart';
+
+part 'unfocus_node.dart';
+part 'path_builder.dart';
+part 'lang_enum.dart';
+part 'whisper.dart';
 
 void main() {
   runApp(const MainApp());
@@ -30,7 +40,7 @@ class MainApp extends StatelessWidget {
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         ),
-        home: HomePage(),
+        home: const HomePage(),
       ),
     );
   }
@@ -46,13 +56,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int page = 0;
+
   late AudioPlayer audioPlayer;
   late AudioRecorder audioRecord;
   bool isRecording = false;
-  String audioPath = '';
 
-  String dirPath = '';
-  String filePath = '';
+  final textToTranslate = TextEditingController();
+  final translatedTextField = TextEditingController();
+
+  final languageMenu = TextEditingController();
 
   @override
   void initState() {
@@ -67,6 +80,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    textToTranslate.dispose();
+    translatedTextField.dispose();
+
+    languageMenu.dispose();
+
     audioRecord.dispose();
     audioPlayer.dispose();
 
@@ -74,9 +92,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future _requestPerms() async {
-    // PermissionStatus recStatus = await Permission.microphone.request();
-    // print('Microphone Perms: $recStatus');
-
     // Asks for microphone and audio file access permissions
     Map<Permission, PermissionStatus> statuses =
         await [Permission.microphone, Permission.audio].request();
@@ -94,46 +109,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future _buildFilePath() async {
-    // Gets cache directory as string for storing audio file on cache
-    Directory tempDir = await getApplicationDocumentsDirectory();
-    String tempPath = tempDir.path;
-
-    // Create directory string and audio file string
-    setState(() {
-      dirPath = '$tempPath/audio';
-      filePath = '$dirPath/test.wav';
-    });
-
-    debugPrint('|- Directory Path: $dirPath');
-    debugPrint('|- Audio File Path: $filePath');
-
-    // Create directory and audio file
-    await _createDir();
-    await _createFile();
-  }
-
-  Future _createDir() async {
-    // Check if the directory already exists
-    bool isDirCreated = await Directory(dirPath).exists();
-    if (!isDirCreated) {
-      // If it doesn't, create directory
-      Directory(dirPath).create(recursive: true).then((Directory dir) {
-        debugPrint("|- Directory Created At: ${dir.path}");
-      });
-    }
-  }
-
-  Future _createFile() async {
-    // Create file at directory path
-    File(filePath).create(recursive: true).then((File file) async {
-      Uint8List bytes = await file.readAsBytes();
-      file.writeAsBytes(bytes, mode: FileMode.writeOnly);
-
-      debugPrint('|- Audio File Created At: ${file.path}');
-    });
-  }
-
   Future<void> _startRecording() async {
     try {
       await _requestPerms();
@@ -148,7 +123,7 @@ class _HomePageState extends State<HomePage> {
 
         debugPrint('|- Recording Config: $recConfig');
 
-        await audioRecord.start(RecordConfig(), path: filePath);
+        await audioRecord.start(const RecordConfig(), path: filePath);
 
         setState(() {
           isRecording = true;
@@ -182,96 +157,139 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future _translate() async {
-    try {
-      WhisperModel model = WhisperModel.base;
-      final Whisper whisper = Whisper(model: WhisperModel.base);
-      debugPrint('|- Whisper Model Loaded: ${model.modelName}');
-
-      final String? whisperVersion = await whisper.getVersion();
-      debugPrint('|- Whisper Version: $whisperVersion');
-
-      debugPrint('|- Whisper Is Working...');
-      var whisperResponse = await whisper.transcribe(
-        transcribeRequest: TranscribeRequest(
-          audio: audioPath,
-          isTranslate: true,
-          isNoTimestamps: false,
-          splitOnWord: false,
-        ),
-      );
-
-      final String translatedText = whisperResponse.text;
-      print('|- Done! Whisper\'s Output: $translatedText');
-
-      return translatedText;
-    } catch (e) {
-      debugPrint('[!!!]- Error: _translate() -> $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Button Row
-            if (isRecording) const Text('Recording in Progress'),
-            Column(
-              children: [
-                ElevatedButton(
-                    onPressed: isRecording ? _stopRecording : _startRecording,
-                    child: isRecording
-                        ? const Text('Stop Recording')
-                        : const Text('Start Recording')),
-                if (!isRecording && audioPath != null && audioPath.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton(
-                          onPressed: _playRecording,
-                          child: const Text('Play Recording')),
-                      SizedBox(width: 20),
-                      ElevatedButton(
-                          onPressed: _translate,
-                          child: const Text('Translate')),
-                    ],
-                  ),
-              ],
+        bottomNavigationBar: CurvedNavigationBar(
+          backgroundColor: Colors.blueAccent,
+          items: const [
+            CurvedNavigationBarItem(
+              child: Icon(Icons.text_fields),
+              label: 'Text Translation',
             ),
-
-            // Text Field: Text to Translate
-            Text('Input Field'),
-            Padding(
-              padding: EdgeInsets.all(20.0),
-              child: TextField(
-                  maxLines: 6,
-                  keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Text To Translate Here',
-                    filled: true,
-                  )),
+            CurvedNavigationBarItem(
+              child: Icon(Icons.multitrack_audio),
+              label: 'Speech Translation',
             ),
-
-            // Text Field: Whisper Output Text
-            Text('Output Field'),
-            Padding(
-              padding: EdgeInsets.all(20.0),
-              child: TextField(
-                  maxLines: 6,
-                  keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Translated Text Here',
-                    filled: true,
-                  )),
+            CurvedNavigationBarItem(
+              child: Icon(Icons.settings),
+              label: 'Settings',
             ),
           ],
+          onTap: (index) {
+            setState(() {
+              page = index;
+            });
+
+            debugPrint('|- Current Page Index: $page');
+          },
         ),
-      ),
-    );
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Button Row
+              if (isRecording) const Text('Recording in Progress'),
+              if (!isRecording && audioPath != null && audioPath.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                        onPressed: _playRecording,
+                        child: const Text('Play Recording')),
+                    const SizedBox(width: 20),
+                    ElevatedButton(
+                        onPressed: () {
+                          _translate().then(
+                              (value) => translatedTextField.text = value);
+                        },
+                        child: const Text('Translate')),
+                  ],
+                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 0.0,
+                      horizontal: 20.0,
+                    ),
+                    child: IconButton.outlined(
+                      isSelected: isRecording,
+                      icon: const Icon(Icons.mic_off),
+                      selectedIcon: const Icon(Icons.mic),
+                      onPressed: () {
+                        setState(() {
+                          isRecording = !isRecording;
+                        });
+
+                        isRecording ? _startRecording() : _stopRecording();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              // Text Field: Text to Translate
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20.0),
+                child: TextField(
+                    controller: textToTranslate,
+                    maxLines: 6,
+                    keyboardType: TextInputType.multiline,
+                    decoration: const InputDecoration(
+                      label: Text('Text to Translate'),
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                      hintText: 'Text to translate here...',
+                      filled: true,
+                    )),
+              ),
+
+              // Language Selection
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: DropdownMenu<LangLabel>(
+                  initialSelection: LangLabel.auto,
+                  controller: languageMenu,
+                  requestFocusOnTap: true,
+                  label: const Text('Spoken Language'),
+                  onSelected: (LangLabel? lang) {
+                    setState(() {
+                      spokenLang = lang as LangLabel;
+                    });
+                    debugPrint('|- Current Language: $spokenLang');
+                  },
+                  dropdownMenuEntries: LangLabel.values
+                      .map<DropdownMenuEntry<LangLabel>>((LangLabel lang) {
+                    return DropdownMenuEntry<LangLabel>(
+                      value: lang,
+                      label: lang.label,
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              // Text Field: Whisper Output Text
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: TextField(
+                    controller: translatedTextField,
+                    maxLines: 6,
+                    keyboardType: TextInputType.multiline,
+                    enableInteractiveSelection: false,
+                    focusNode: UnfocusNode(),
+                    decoration: const InputDecoration(
+                      label: Text('Translated Text'),
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                      hintText: 'Translated text outputs here...',
+                      filled: true,
+                    )),
+              ),
+            ],
+          ),
+        ));
   }
 }

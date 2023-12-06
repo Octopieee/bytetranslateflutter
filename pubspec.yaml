@@ -8,6 +8,7 @@ environment:
 
 dependencies:
     audioplayers: ^5.2.1
+    curved_labeled_navigation_bar: ^2.0.2
     flutter:
         sdk: flutter
     path_provider: ^2.1.1
