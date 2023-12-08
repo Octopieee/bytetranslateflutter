@@ -1,6 +1,4 @@
-part of 'main.dart';
-
-enum LangLabel {
+enum SpokenLangLabel {
   auto('Auto-Detect', 'id'),
   english('English', 'en'),
   spanish('Spanish', 'es'),
@@ -9,7 +7,7 @@ enum LangLabel {
   chinese('Chinese', 'zh'),
   dutch('Dutch', 'nl');
 
-  const LangLabel(this.label, this.lang);
+  const SpokenLangLabel(this.label, this.lang);
   final String label;
   final String lang;
 }

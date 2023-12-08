@@ -1,11 +1,11 @@
-part of 'main.dart';
+part of 'speech_translate_page.dart';
 
 String audioPath = '';
-LangLabel spokenLang = LangLabel.auto;
+SpokenLangLabel spokenLang = SpokenLangLabel.auto;
 
 Future<String> _translate() async {
   try {
-    const WhisperModel model = WhisperModel.medium;
+    const WhisperModel model = WhisperModel.base;
 
     const Whisper whisper = Whisper(
       model: model,
@@ -21,6 +21,7 @@ Future<String> _translate() async {
         audio: audioPath,
         isTranslate: true,
         language: spokenLang.lang,
+        diarize: false,
         threads: 8,
       ),
     );

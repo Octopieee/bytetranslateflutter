@@ -1,4 +1,4 @@
-part of 'main.dart';
+part of 'speech_translate_page.dart';
 
 String dirPath = '';
 String filePath = '';

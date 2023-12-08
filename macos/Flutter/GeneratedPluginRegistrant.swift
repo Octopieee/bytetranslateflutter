@@ -9,10 +9,12 @@ import audioplayers_darwin
 import ffmpeg_kit_flutter_full_gpl
 import path_provider_foundation
 import record_darwin
+import system_theme
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AudioplayersDarwinPlugin.register(with: registry.registrar(forPlugin: "AudioplayersDarwinPlugin"))
   FFmpegKitFlutterPlugin.register(with: registry.registrar(forPlugin: "FFmpegKitFlutterPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
   RecordPlugin.register(with: registry.registrar(forPlugin: "RecordPlugin"))
+  SystemThemePlugin.register(with: registry.registrar(forPlugin: "SystemThemePlugin"))
 }
