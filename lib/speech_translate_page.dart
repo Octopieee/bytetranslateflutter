@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:record/record.dart';
-// import 'package:audioplayers/audioplayers.dart';
 
 import 'package:whisper_flutter_plus/whisper_flutter_plus.dart';
 
@@ -28,7 +26,6 @@ class SpeechTranslate extends StatefulWidget {
 }
 
 class _SpeechTranslateState extends State<SpeechTranslate> {
-  // late AudioPlayer audioPlayer;
   late AudioRecorder audioRecord;
   bool isRecording = false;
   final translatedTextField = TextEditingController();
@@ -39,9 +36,6 @@ class _SpeechTranslateState extends State<SpeechTranslate> {
   void initState() {
     // Initialize recorder and player
     audioRecord = AudioRecorder();
-    // audioPlayer = AudioPlayer();
-
-    // _requestPerms();
 
     super.initState();
   }
@@ -53,7 +47,6 @@ class _SpeechTranslateState extends State<SpeechTranslate> {
     languageMenu.dispose();
 
     audioRecord.dispose();
-    // audioPlayer.dispose();
 
     super.dispose();
   }
@@ -115,15 +108,6 @@ class _SpeechTranslateState extends State<SpeechTranslate> {
     }
   }
 
-  // Future<void> _playRecording() async {
-  //   try {
-  //     Source urlSource = DeviceFileSource(audioPath);
-  //     await audioPlayer.play(urlSource);
-  //   } catch (e) {
-  //     debugPrint('[!!!]- Error: _playRecording() -> $e');
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -133,23 +117,8 @@ class _SpeechTranslateState extends State<SpeechTranslate> {
         const Spacer(
           flex: 1,
         ),
-        // Button Row
-        // if (!isRecording && audioPath != null && audioPath.isNotEmpty)
-        //   Row(
-        //     mainAxisSize: MainAxisSize.min,
-        //     children: [
-        //       ElevatedButton(
-        //           onPressed: _playRecording,
-        //           child: const Text('Play Recording')),
-        //       const SizedBox(width: 20),
-        //       ElevatedButton(
-        //           onPressed: () {
-        //             _translate()
-        //                 .then((value) => translatedTextField.text = value);
-        //           },
-        //           child: const Text('Translate')),
-        //     ],
-        //   ),
+
+        // Top Row with Button and Dropdown
         Row(
           children: [
             Padding(
@@ -217,8 +186,6 @@ class _SpeechTranslateState extends State<SpeechTranslate> {
               controller: translatedTextField,
               maxLines: 15,
               keyboardType: TextInputType.multiline,
-              // enableInteractiveSelection: false,
-              // focusNode: UnfocusNode(),
               decoration: const InputDecoration(
                 label: Text('Translated Text'),
                 alignLabelWithHint: true,

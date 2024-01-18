@@ -1,5 +1,5 @@
 name: bytetranslateflutter
-description: "A new Flutter project."
+description: "An AI powered translator app."
 publish_to: "none"
 version: 0.1.0
 
@@ -11,6 +11,7 @@ dependencies:
     curved_labeled_navigation_bar: ^2.0.2
     flutter:
         sdk: flutter
+    flutter_launcher_icons: ^0.13.1
     google_mlkit_translation: ^0.9.0
     path_provider: ^2.1.1
     permission_handler: ^11.1.0
@@ -26,3 +27,5 @@ dev_dependencies:
 
 flutter:
     uses-material-design: true
+    assets:
+        - assets/images/

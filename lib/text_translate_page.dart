@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 
+import 'unfocus_node.dart';
+
 part 'google_ml.dart';
 
 class TextTranslate extends StatefulWidget {
@@ -36,6 +38,8 @@ class _TextTranslateState extends State<TextTranslate> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return SingleChildScrollView(
       child: Center(
           child: Column(
@@ -55,14 +59,8 @@ class _TextTranslateState extends State<TextTranslate> {
                       translate(textToTranslate.text).then(
                           (output) => {translatedTextField.text = output});
                     },
-                    child: const Text('Translate'),
-                  )
-                  // ElevatedButton(
-                  //   onPressed: translate,
-                  //   style: ElevatedButton.styleFrom(elevation: 12),
-                  //   child: const Text('Translate'),
-                  // ),
-                  ),
+                    child: const Text('Translate with Google'),
+                  )),
             ],
           ),
 
@@ -121,8 +119,8 @@ class _TextTranslateState extends State<TextTranslate> {
                       .map<DropdownMenuEntry<String>>((lang) {
                     return DropdownMenuEntry<String>(
                       value: lang.bcpCode,
-                      // label: capitalize(lang.name),
-                      label: lang.name,
+                      label: capitalize(lang.name),
+                      // label: lang.name,
                     );
                   }).toList(),
                 ),
@@ -166,9 +164,10 @@ class _TextTranslateState extends State<TextTranslate> {
                   dropdownMenuEntries: TranslateLanguage.values
                       .map<DropdownMenuEntry<String>>((lang) {
                     return DropdownMenuEntry<String>(
-                        value: lang.bcpCode,
-                        // label: capitalize(lang.name),
-                        label: lang.name);
+                      value: lang.bcpCode,
+                      label: capitalize(lang.name),
+                      // label: lang.name,
+                    );
                   }).toList(),
                 ),
               ),
@@ -187,6 +186,7 @@ class _TextTranslateState extends State<TextTranslate> {
                 keyboardType: TextInputType.multiline,
                 // enableInteractiveSelection: false,
                 // focusNode: UnfocusNode(),
+                readOnly: true,
                 decoration: const InputDecoration(
                   label: Text('Translated Text'),
                   alignLabelWithHint: true,
@@ -195,8 +195,34 @@ class _TextTranslateState extends State<TextTranslate> {
                   filled: true,
                 )),
           ),
+
+          // Picture with Google branding because legal stuff :(
+          Row(
+            children: [
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(
+                    left: 20.0, right: 20.0, bottom: 20.0),
+                child: Image(
+                  image: isDarkMode
+                      ? const AssetImage('assets/images/white-regular.png')
+                      : const AssetImage('assets/images/color-regular.png'),
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ],
+          )
         ],
       )),
     );
   }
+}
+
+String capitalize(String word) {
+  String firstHalf = word[0].toUpperCase();
+  String secondHalf = word.substring(1);
+
+  String capWord = firstHalf + secondHalf;
+
+  return capWord;
 }

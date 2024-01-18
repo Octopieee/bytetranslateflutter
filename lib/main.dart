@@ -7,7 +7,7 @@ import 'package:curved_labeled_navigation_bar/curved_navigation_bar_item.dart';
 
 import 'speech_translate_page.dart';
 import 'text_translate_page.dart';
-// import 'settings_page.dart';
+import 'settings_page.dart';
 
 void main() {
   runApp(const MainApp());
@@ -74,10 +74,10 @@ class _HomePageState extends State<HomePage> {
               child: Icon(Icons.multitrack_audio),
               label: 'Speech Translation',
             ),
-            // CurvedNavigationBarItem(
-            //   child: Icon(Icons.settings),
-            //   label: 'Settings',
-            // ),
+            CurvedNavigationBarItem(
+              child: Icon(Icons.settings),
+              label: 'Settings',
+            ),
           ],
           onTap: (index) {
             setState(() {
@@ -105,6 +105,7 @@ class _HomePageState extends State<HomePage> {
           children: const [
             TextTranslate(),
             SpeechTranslate(),
+            Settings(),
           ],
         ));
   }
